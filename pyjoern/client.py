@@ -281,7 +281,7 @@ class JoernClient:
         if not out:
             return {}
         out = out if isinstance(out, tuple) and isinstance(out[0], tuple) else (out,)
-        
+
         vars = {varname: {'line': line, 'column': col} for varname, line, col in out}
         return vars
 
@@ -339,6 +339,12 @@ class JoernClient:
         # return set(self._filter_blacklisted(out))
         return set(out)
 
+    def _clean_ANSI_escapes(response):
+        if 'stdout' in response:
+            import re
+            ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+            response['stdout'] = ansi_escape.sub('', response['stdout'])
+
     @staticmethod
     def _filter_blacklisted(strings):
         blacklist = [
@@ -363,7 +369,24 @@ class JoernClient:
             return None
 
         return int_val
-    
+
+    def _exec_json_cmd(self, client, cmd):
+        res = client.client.execute(cmd)
+        self._clean_ANSI_escapes(res)
+        if res["success"]:
+            import json
+            # remove "val res: String = ..."
+            json_str = res["stdout"].split("=", 1)[1].strip()
+
+            # remove surrounding qutoes
+            json_str = json_str[1:-1]
+
+            # remove unicode escapes
+            json_str = json_str.encode().decode("unicode_escape")
+            data = json.loads(json_str)
+
+            return data
+
     def _get_str_int(self, req_res, cmd=None):
         if 'stdout' not in req_res:
             return None
