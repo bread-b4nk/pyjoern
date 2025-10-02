@@ -372,8 +372,8 @@ class JoernClient:
 
     def _exec_json_cmd(self, client, cmd):
         res = client.client.execute(cmd)
-        self._clean_ANSI_escapes(res)
         if res["success"]:
+            self._clean_ANSI_escapes(res)
             import json
             # remove "val res: String = ..."
             json_str = res["stdout"].split("=", 1)[1].strip()
